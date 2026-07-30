@@ -51,7 +51,7 @@ async def schedule_job(
         
     except Exception as e:
         logger.error(f"Failed to schedule job: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/{job_id}/unschedule")
@@ -76,7 +76,7 @@ async def unschedule_job(
         
     except Exception as e:
         logger.error(f"Failed to unschedule job: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{job_id}")
@@ -105,7 +105,7 @@ async def get_job(
         
     except Exception as e:
         logger.error(f"Failed to get job: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/")
@@ -154,4 +154,4 @@ async def list_jobs(
         
     except Exception as e:
         logger.error(f"Failed to list jobs: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))

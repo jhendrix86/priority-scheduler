@@ -50,7 +50,7 @@ async def create_task(
         
     except Exception as e:
         logger.error(f"Failed to create task: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/{task_id}/cancel")
@@ -75,7 +75,7 @@ async def cancel_task(
         
     except Exception as e:
         logger.error(f"Failed to cancel task: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/{task_id}/retry")
@@ -101,7 +101,7 @@ async def retry_task(
         
     except Exception as e:
         logger.error(f"Failed to retry task: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{task_id}")
@@ -129,7 +129,7 @@ async def get_task(
         
     except Exception as e:
         logger.error(f"Failed to get task: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/")
@@ -180,4 +180,4 @@ async def list_tasks(
         
     except Exception as e:
         logger.error(f"Failed to list tasks: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))

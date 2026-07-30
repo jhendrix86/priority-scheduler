@@ -39,7 +39,7 @@ class Queue(Base):
     priority = Column(Integer, default=5)  # Lower number = higher priority
     
     # Metadata
-    metadata = Column(JSON, nullable=True)
+    extra_metadata = Column(JSON, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)

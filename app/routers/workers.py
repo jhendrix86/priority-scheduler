@@ -70,7 +70,7 @@ async def get_worker_status(
         
     except Exception as e:
         logger.error(f"Failed to get worker status: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/scale")
@@ -96,4 +96,4 @@ async def scale_workers(
         
     except Exception as e:
         logger.error(f"Failed to scale workers: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))

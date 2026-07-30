@@ -54,7 +54,7 @@ async def get_queue_status(
         
     except Exception as e:
         logger.error(f"Failed to get queue status: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/{queue_name}/pause")
@@ -79,7 +79,7 @@ async def pause_queue(
         
     except Exception as e:
         logger.error(f"Failed to pause queue: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/{queue_name}/resume")
@@ -104,4 +104,4 @@ async def resume_queue(
         
     except Exception as e:
         logger.error(f"Failed to resume queue: {e}")
-        raise HTTPException(status_code=500, detail(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
