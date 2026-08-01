@@ -2,7 +2,7 @@
 Worker models
 """
 
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, Enum, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, Enum, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -49,7 +49,7 @@ class Worker(Base):
     last_heartbeat = Column(DateTime, nullable=True)
     
     # Relationships
-    tasks = relationship("Task")
+    tasks = relationship("Task", foreign_keys="Task.worker_id", overlaps="worker")
     
     def __repr__(self):
         return f"<Worker {self.name} - {self.status}>"

@@ -1,5 +1,6 @@
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
+sqlalchemy[asyncio]>=2.0.0
 aio-pika>=9.0.0
 autonomy-events>=1.0.0
 structlog>=23.0.0
@@ -15,3 +16,5 @@ redis>=5.0.0
 asyncpg>=0.29.0
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
+aiosqlite>=0.19.0  # test-only: in-memory DB for the test suite
+asgi-lifespan>=2.1.0  # test-only: drives FastAPI startup/shutdown in tests

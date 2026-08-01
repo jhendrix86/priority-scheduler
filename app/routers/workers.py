@@ -2,14 +2,16 @@
 Worker router
 """
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from app.database import get_db
+from app.models.worker import Worker, WorkerStatus
+from app.utils.serializers import model_to_dict
 
 router = APIRouter()
 
@@ -21,53 +23,15 @@ async def get_worker_status(
     """Get worker status"""
     try:
         logger.info("Getting worker status")
-        
-        # In production, this would query from database
-        # For now, return a mock response
-        workers = [
-            {
-                "id": "worker_001",
-                "name": "Worker-1",
-                "worker_type": "general",
-                "status": "busy",
-                "tasks_completed": 150,
-                "tasks_failed": 5,
-                "current_task_id": "task_123"
-            },
-            {
-                "id": "worker_002",
-                "name": "Worker-2",
-                "worker_type": "general",
-                "status": "idle",
-                "tasks_completed": 145,
-                "tasks_failed": 3,
-                "current_task_id": None
-            },
-            {
-                "id": "worker_003",
-                "name": "Worker-3",
-                "worker_type": "general",
-                "status": "idle",
-                "tasks_completed": 160,
-                "tasks_failed": 2,
-                "current_task_id": None
-            },
-            {
-                "id": "worker_004",
-                "name": "Worker-4",
-                "worker_type": "general",
-                "status": "idle",
-                "tasks_completed": 155,
-                "tasks_failed": 4,
-                "current_task_id": None
-            }
-        ]
-        
+
+        result = await db.execute(select(Worker))
+        workers = result.scalars().all()
+
         return {
             "total": len(workers),
-            "workers": workers
+            "workers": [model_to_dict(w) for w in workers]
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to get worker status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -78,22 +42,48 @@ async def scale_workers(
     target_count: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Scale workers"""
+    """Scale the worker pool up or down to target_count active workers"""
     try:
         logger.info(f"Scaling workers to {target_count}")
-        
-        # In production, this would scale worker pool
-        # For now, return a mock response
-        result = {
-            "current_count": 4,
+
+        if target_count < 0:
+            raise HTTPException(status_code=400, detail="target_count cannot be negative")
+
+        active_result = await db.execute(
+            select(Worker).where(Worker.status != WorkerStatus.OFFLINE)
+        )
+        active_workers = active_result.scalars().all()
+        current_count = len(active_workers)
+
+        if target_count > current_count:
+            next_index_result = await db.execute(select(func.count(Worker.id)))
+            next_index = next_index_result.scalar_one() + 1
+            for i in range(target_count - current_count):
+                worker = Worker(
+                    name=f"Worker-{next_index + i}",
+                    worker_type="general",
+                    status=WorkerStatus.IDLE,
+                )
+                db.add(worker)
+
+        elif target_count < current_count:
+            # Prefer retiring idle workers first, leave busy ones running
+            to_retire = sorted(active_workers, key=lambda w: w.status != WorkerStatus.IDLE)
+            for worker in to_retire[: current_count - target_count]:
+                worker.status = WorkerStatus.OFFLINE
+
+        await db.commit()
+
+        logger.info(f"Workers scaled to {target_count}")
+        return {
+            "previous_count": current_count,
             "target_count": target_count,
-            "scaling": target_count > 4,
+            "scaling": target_count > current_count,
             "scaled_at": datetime.utcnow().isoformat()
         }
-        
-        logger.info(f"Workers scaled to {target_count}")
-        return result
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to scale workers: {e}")
         raise HTTPException(status_code=500, detail=str(e))

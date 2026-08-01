@@ -2,14 +2,19 @@
 Job router
 """
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
+import uuid
 from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from loguru import logger
 
 from app.database import get_db
+from app.models.job import Job, JobStatus
+from app.utils.serializers import model_to_dict
 
 router = APIRouter()
 
@@ -31,24 +36,23 @@ async def schedule_job(
     """Schedule a recurring job"""
     try:
         logger.info(f"Scheduling job: {request.name}")
-        
-        # In production, this would save to database and schedule with cron
-        # For now, return a mock response
-        job = {
-            "id": "job_123",
-            "name": request.name,
-            "job_type": request.job_type,
-            "cron_expression": request.cron_expression,
-            "timezone": request.timezone,
-            "payload": request.payload,
-            "status": "active",
-            "next_run_at": datetime.utcnow().isoformat(),
-            "created_at": datetime.utcnow().isoformat()
-        }
-        
-        logger.info(f"Job scheduled: {job['id']}")
-        return job
-        
+
+        job = Job(
+            name=request.name,
+            job_type=request.job_type,
+            cron_expression=request.cron_expression,
+            timezone=request.timezone,
+            payload=request.payload,
+            status=JobStatus.ACTIVE,
+        )
+
+        db.add(job)
+        await db.commit()
+        await db.refresh(job)
+
+        logger.info(f"Job scheduled: {job.id}")
+        return model_to_dict(job)
+
     except Exception as e:
         logger.error(f"Failed to schedule job: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -62,18 +66,20 @@ async def unschedule_job(
     """Unschedule a job"""
     try:
         logger.info(f"Unscheduling job {job_id}")
-        
-        # In production, this would update database and remove from cron
-        # For now, return a mock response
-        job = {
-            "id": job_id,
-            "status": "cancelled",
-            "unscheduled_at": datetime.utcnow().isoformat()
-        }
-        
+
+        job = await db.get(Job, uuid.UUID(job_id))
+        if job is None:
+            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+
+        job.status = JobStatus.CANCELLED
+        await db.commit()
+        await db.refresh(job)
+
         logger.info(f"Job unscheduled: {job_id}")
-        return job
-        
+        return model_to_dict(job)
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to unschedule job: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -87,22 +93,15 @@ async def get_job(
     """Get job details"""
     try:
         logger.info(f"Getting job details for {job_id}")
-        
-        # In production, this would query from database
-        # For now, return a mock response
-        job = {
-            "id": job_id,
-            "name": "Daily Report",
-            "job_type": "report_generation",
-            "cron_expression": "0 9 * * *",
-            "status": "active",
-            "last_run_at": (datetime.utcnow() - timedelta(days=1)).isoformat(),
-            "next_run_at": (datetime.utcnow() + timedelta(days=1)).isoformat(),
-            "run_count": 30
-        }
-        
-        return job
-        
+
+        job = await db.get(Job, uuid.UUID(job_id))
+        if job is None:
+            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+
+        return model_to_dict(job)
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get job: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -110,7 +109,7 @@ async def get_job(
 
 @router.get("/")
 async def list_jobs(
-    status: Optional[str] = None,
+    status: Optional[JobStatus] = None,
     job_type: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
@@ -119,31 +118,25 @@ async def list_jobs(
     """List jobs"""
     try:
         logger.info("Listing jobs")
-        
-        # In production, this would query from database with filters
-        # For now, return a mock response
-        jobs = [
-            {
-                "id": "job_001",
-                "name": "Daily Report",
-                "job_type": "report_generation",
-                "status": "active",
-                "cron_expression": "0 9 * * *"
-            },
-            {
-                "id": "job_002",
-                "name": "Weekly Cleanup",
-                "job_type": "maintenance",
-                "status": "active",
-                "cron_expression": "0 2 * * 0"
-            }
-        ]
-        
+
+        query = select(Job)
+        if status is not None:
+            query = query.where(Job.status == status)
+        if job_type is not None:
+            query = query.where(Job.job_type == job_type)
+
+        count_result = await db.execute(query)
+        total = len(count_result.scalars().all())
+
+        query = query.order_by(Job.created_at.desc()).limit(limit).offset(offset)
+        result = await db.execute(query)
+        jobs = [model_to_dict(j) for j in result.scalars().all()]
+
         return {
-            "total": len(jobs),
+            "total": total,
             "jobs": jobs,
             "filters": {
-                "status": status,
+                "status": status.value if status else None,
                 "job_type": job_type
             },
             "pagination": {
@@ -151,7 +144,7 @@ async def list_jobs(
                 "offset": offset
             }
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to list jobs: {e}")
         raise HTTPException(status_code=500, detail=str(e))

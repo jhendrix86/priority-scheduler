@@ -2,7 +2,7 @@
 Queue models
 """
 
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, Enum
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, Enum, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid

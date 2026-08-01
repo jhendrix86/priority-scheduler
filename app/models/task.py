@@ -76,7 +76,7 @@ class Task(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    worker = relationship("Worker")
+    worker = relationship("Worker", foreign_keys=[worker_id])
     
     def __repr__(self):
         return f"<Task {self.id} - {self.task_type} - {self.status}>"
