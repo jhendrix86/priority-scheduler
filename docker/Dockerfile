@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 
 # Expose port
-EXPOSE 8034
+EXPOSE 8046
 
 # Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8034"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8046"]

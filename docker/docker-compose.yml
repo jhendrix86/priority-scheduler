@@ -7,7 +7,7 @@ services:
       dockerfile: docker/Dockerfile
     container_name: priority-scheduler
     ports:
-      - "8034:8034"
+      - "8046:8046"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/scheduler
       - REDIS_URL=redis://redis:6379
