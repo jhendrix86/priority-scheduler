@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  priority-scheduler:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: priority-scheduler
+    ports:
+      - "8034:8034"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/scheduler
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - WORKER_COUNT=${WORKER_COUNT:-4}
+      - MAX_RETRIES=${MAX_RETRIES:-3}
+      - DEFAULT_QUEUE=${DEFAULT_QUEUE:-default}
+      - CRITICAL_QUEUE=${CRITICAL_QUEUE:-critical}
+      - TASK_TIMEOUT_SECONDS=${TASK_TIMEOUT_SECONDS:-300}
+      - DEBUG=${DEBUG:-false}
+      - GLOBAL_STATE_MANAGER_URL=http://global-state-manager:8035
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - scheduler-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: scheduler-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=scheduler
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - scheduler-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: scheduler-redis
+    networks:
+      - scheduler-network
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: scheduler-rabbitmq
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - scheduler-network
+    restart: unless-stopped
+
+networks:
+  scheduler-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
