@@ -10,7 +10,7 @@ services:
       - "8046:8046"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/scheduler
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://redis:6379/8
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - WORKER_COUNT=${WORKER_COUNT:-4}
       - MAX_RETRIES=${MAX_RETRIES:-3}
@@ -19,53 +19,13 @@ services:
       - TASK_TIMEOUT_SECONDS=${TASK_TIMEOUT_SECONDS:-300}
       - DEBUG=${DEBUG:-false}
       - GLOBAL_STATE_MANAGER_URL=http://global-state-manager:8035
-    depends_on:
-      - postgres
-      - redis
-      - rabbitmq
+    # No depends_on here - postgres/redis/rabbitmq moved to shared infra
+    # (deploy/docker-compose.infra.yml), a different compose project.
+    # Bring that up first: deploy/03-build-and-up.sh infra-up
     networks:
-      - scheduler-network
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:15-alpine
-    container_name: scheduler-postgres
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=scheduler
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - scheduler-network
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    container_name: scheduler-redis
-    networks:
-      - scheduler-network
-    restart: unless-stopped
-
-  rabbitmq:
-    image: rabbitmq:3.12-management
-    container_name: scheduler-rabbitmq
-    ports:
-      - "5673:5672"
-      - "15673:15672"
-    environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-    networks:
-      - scheduler-network
+      - os42-shared
     restart: unless-stopped
 
 networks:
-  scheduler-network:
-    driver: bridge
-
-volumes:
-  postgres-data:
-  rabbitmq-data:
+  os42-shared:
+    external: true
