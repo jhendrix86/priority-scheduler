@@ -3,8 +3,11 @@ version: '3.8'
 services:
   priority-scheduler:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
+      # Workspace root, not just this repo - needed to reach the
+      # autonomy-events sibling package the Dockerfile copies in (see its
+      # own comment for why).
+      context: ../..
+      dockerfile: priority-scheduler/docker/Dockerfile
     container_name: priority-scheduler
     ports:
       - "8046:8046"
