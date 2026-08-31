@@ -88,7 +88,9 @@ class TaskConsumer(BaseConsumer):
         if decision.scheduled and decision.queue:
             from ..schemas.queue_schemas import QueueType
             queue_type = QueueType(decision.queue)
-            await self.queue_manager.enqueue(queue_type, task.dict())
+            # mode="json": redis_queue.enqueue json.dumps()es this dict; a
+            # bare .dict() keeps datetime objects and the dump raises.
+            await self.queue_manager.enqueue(queue_type, task.model_dump(mode="json"))
         
         logger.info("task_submitted_handled", task_id=task_id, scheduled=decision.scheduled)
     
@@ -118,7 +120,7 @@ class TaskConsumer(BaseConsumer):
                 error_message=payload.get("error_message")
             )
             
-            await self.queue_manager.enqueue(QueueType.RETRY, task.dict())
+            await self.queue_manager.enqueue(QueueType.RETRY, task.model_dump(mode="json"))
             logger.info("task_requeued", task_id=task_id, retry_count=retry_count + 1)
         else:
             # Send to DLQ
