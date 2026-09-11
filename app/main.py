@@ -11,7 +11,7 @@ from datetime import datetime
 import os
 
 from app.config import settings
-from app.database import init_db
+from app.database import init_db, wait_for_database
 from app.scheduler.scheduler_engine import SchedulerEngine
 from app.routers import tasks, jobs, queues, workers
 
@@ -22,6 +22,12 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Priority Scheduler...")
 
     # Initialize database
+
+    # Wait out any post-reboot window where Postgres isn't accepting
+    # connections yet before the first query. Without this the container
+    # crash-loops instead of self-healing (BA-13).
+    await wait_for_database()
+
     await init_db()
 
     # Single shared scheduler engine instance for the app's lifetime
