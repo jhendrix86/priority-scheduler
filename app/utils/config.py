@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_user: str = "postgres"
-    postgres_password: str = "password"
+    postgres_password: str  # Required: set the POSTGRES_PASSWORD environment variable or .env entry - no default; startup fails if absent
     postgres_database: str = "priority_scheduler"
     
     # RabbitMQ
